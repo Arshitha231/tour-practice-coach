@@ -144,6 +144,55 @@ const CATEGORY_LABELS = {
   fillers:     'Filler Control',
 };
 
+// Illustrated empty-state (clipboard with checkmarks + sparkles + leaf).
+// Palette locked to the warm cream + plum theme so it feels native.
+const EMPTY_STATE_SVG = `
+<svg viewBox="0 0 220 180" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <!-- soft lavender blob behind the clipboard -->
+  <ellipse cx="112" cy="106" rx="86" ry="52" fill="#E6DBEE"/>
+
+  <!-- leaf, bottom-right of clipboard -->
+  <g transform="translate(142 118)">
+    <path d="M0 0 Q18 -14 36 -6 Q30 14 10 18 Q0 14 0 0 Z" fill="#6B8E5C"/>
+    <path d="M4 2 Q18 -4 30 -2" stroke="#3F5A32" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+    <path d="M8 10 Q18 6 26 8" stroke="#3F5A32" stroke-width="1.1" fill="none" stroke-linecap="round" opacity="0.6"/>
+  </g>
+
+  <!-- clipboard back shadow -->
+  <rect x="60" y="42" width="92" height="112" rx="8" fill="#D4C4DF"/>
+
+  <!-- clipboard body -->
+  <rect x="56" y="38" width="92" height="112" rx="8" fill="#FBF7EC" stroke="#2A2342" stroke-width="2.5"/>
+
+  <!-- clip at top -->
+  <rect x="86" y="28" width="32" height="18" rx="4" fill="#2A2342"/>
+  <rect x="92" y="24" width="20" height="12" rx="3" fill="#4A3860"/>
+
+  <!-- checklist row 1 (checked) -->
+  <rect x="70" y="68" width="14" height="14" rx="3" fill="none" stroke="#6E4F72" stroke-width="2"/>
+  <path d="M73 75 L77 79 L83 70" stroke="#6B8E5C" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="90" y="72" width="46" height="4" rx="2" fill="#6E4F72" opacity="0.7"/>
+  <rect x="90" y="80" width="30" height="3" rx="1.5" fill="#6E4F72" opacity="0.35"/>
+
+  <!-- checklist row 2 (checked) -->
+  <rect x="70" y="98" width="14" height="14" rx="3" fill="none" stroke="#6E4F72" stroke-width="2"/>
+  <path d="M73 105 L77 109 L83 100" stroke="#6B8E5C" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="90" y="102" width="40" height="4" rx="2" fill="#6E4F72" opacity="0.7"/>
+  <rect x="90" y="110" width="26" height="3" rx="1.5" fill="#6E4F72" opacity="0.35"/>
+
+  <!-- checklist row 3 (unchecked, lower opacity to suggest "to do") -->
+  <rect x="70" y="128" width="14" height="14" rx="3" fill="none" stroke="#6E4F72" stroke-width="2" opacity="0.5"/>
+  <rect x="90" y="132" width="36" height="4" rx="2" fill="#6E4F72" opacity="0.35"/>
+
+  <!-- sparkles -->
+  <g fill="#D4B678">
+    <path d="M172 50 L174 56 L180 58 L174 60 L172 66 L170 60 L164 58 L170 56 Z"/>
+    <path d="M38 72 L39.5 76 L43.5 77.5 L39.5 79 L38 83 L36.5 79 L32.5 77.5 L36.5 76 Z"/>
+    <circle cx="168" cy="82" r="2"/>
+    <circle cx="46" cy="48" r="1.6"/>
+  </g>
+</svg>`;
+
 // Difficulty-mode presets. Easy = forgiving, Strict = tour-day standard.
 const MODE_PRESETS = {
   easy: {
@@ -1514,9 +1563,9 @@ function renderDashboard() {
   if (sessions.length === 0) {
     el.innerHTML = `
       <div class="dash-empty">
-        <div style="font-size:3rem; margin-bottom:8px">&#x1F4CA;</div>
+        <div class="dash-empty-art">${EMPTY_STATE_SVG}</div>
         <strong>No sessions yet.</strong><br>
-        Complete a practice and grade it — your scores will be saved here automatically.
+        Complete a practice and grade it &mdash; your scores will be saved here automatically.
       </div>`;
     return;
   }

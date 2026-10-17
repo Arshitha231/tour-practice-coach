@@ -1527,16 +1527,30 @@ body.view-practice  .dashboard-only { display: none !important; }
 /* ── Dashboard widgets (used in landing view) ─────────────────────── */
 
 .dash-empty {
-  padding: 80px 24px;
+  padding: 56px 24px 60px;
   text-align: center;
-  color: var(--muted);
-  font-size: 1rem;
+  color: var(--text-2);
+  font-size: 0.92rem;
   line-height: 1.6;
   background: var(--surface);
   border-radius: var(--radius-lg);
   border: 1px dashed var(--border);
 }
-.dash-empty strong { color: var(--text); font-size: 1.1rem; }
+.dash-empty-art {
+  width: 220px;
+  max-width: 70%;
+  margin: 0 auto 16px;
+}
+.dash-empty-art svg { width: 100%; height: auto; display: block; }
+.dash-empty strong {
+  color: var(--text);
+  font-family: 'Fraunces', 'Inter', serif;
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  display: inline-block;
+  margin-bottom: 4px;
+}
 
 .dash-stats {
   display: grid;
