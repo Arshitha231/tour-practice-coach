@@ -992,12 +992,13 @@ function posDetectLoop() {
     posDistanceEl.style.color = 'var(--orange)';
   }
 
-  // Auto-trigger start when fist held while in position
+  // Auto-trigger start when fist held while in position.
+  // Hand the Position Coach camera stream off to the main camera feed so
+  // the stop-fist gesture also works without the user flipping switches.
   if (gestureArmed && positionOK && fistFrames >= FIST_HOLD_FRAMES && !state.running) {
     gestureArmed = false;
     console.log('[Gesture] Fist trigger — starting practice');
-    closePositionCoach();
-    // Defer click so overlay teardown finishes first
+    closePositionCoach(true);     // true = transfer stream to main cam
     setTimeout(() => startBtn.click(), 200);
     return;
   }
@@ -1043,14 +1044,23 @@ $('positionBtn').addEventListener('click', async () => {
   setTimeout(() => { gestureArmed = true; }, 1500);
 });
 
-$('closePosition').addEventListener('click', closePositionCoach);
+$('closePosition').addEventListener('click', () => closePositionCoach(false));
 
-function closePositionCoach() {
+function closePositionCoach(transferStreamToMainCam = false) {
   $('positionOverlay').style.display = 'none';
   if (posLoopId) cancelAnimationFrame(posLoopId);
   posLoopId = null;
   if (posStream) {
-    posStream.getTracks().forEach(t => t.stop());
+    if (transferStreamToMainCam) {
+      // Hand live stream to the main camera feed so Stop gesture + self-view
+      // keep working seamlessly. No tracks stopped.
+      state.camStream = posStream;
+      cameraFeed.srcObject = posStream;
+      cameraOverlay.classList.add('hidden');
+      cameraBtn.textContent = 'Disable Camera';
+    } else {
+      posStream.getTracks().forEach(t => t.stop());
+    }
     posStream = null;
   }
   posVideo.srcObject = null;
