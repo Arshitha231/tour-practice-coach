@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tour Practice Coach</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="view-dashboard">
+
+  <!-- ── Header ── -->
+  <header class="app-header">
+    <div class="header-left"
+         data-help-title="Tour Practice Coach"
+         data-help-text="A strict-supervisor practice tool for tour guides. It listens, watches, and grades you on the things real guides are evaluated on.">
+      <span class="app-title">Tour Practice Coach</span>
+      <span class="app-subtitle">Strict Mode</span>
+    </div>
+    <div class="header-center practice-only"
+         data-help-title="Session Timer"
+         data-help-text="Counts up from 00:00 the moment you click Start. Use it to pace yourself against your Target Duration in the rubric.">
+      <div class="timer-display" id="timerDisplay">00:00</div>
+      <div class="recording-badge" id="recordingBadge">
+        <span class="rec-dot"></span> RECORDING
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="btn-help" id="helpBtn" title="Help — click once for inspect mode, click again for a guided tour">?</button>
+      <button class="btn btn-reset practice-only" id="backToDashBtn"
+              data-help-title="Back to Dashboard"
+              data-help-text="Returns you to the home dashboard. If a session is running, you'll be asked to confirm so you don't lose progress.">&larr; Dashboard</button>
+      <button class="btn btn-start practice-only" id="startBtn"
+              data-help-title="Start Practice"
+              data-help-text="Begins the session: starts the timer, opens the mic, and starts watching for fillers, stories, and ice-breaker questions. You can also start hands-free with a fist in the Position Coach.">&#9654; Start</button>
+      <button class="btn btn-stop practice-only" id="stopBtn" disabled
+              data-help-title="Stop &amp; Grade"
+              data-help-text="Ends the session and opens your Performance Report. The session auto-saves to your dashboard so you can compare future runs. (You can also stop hands-free by showing a fist if your main camera is on.)">&#9632; Stop &amp; Grade</button>
+      <button class="btn btn-reset practice-only" id="resetBtn"
+              data-help-title="Reset"
+              data-help-text="Wipes the current session's counters and timer WITHOUT saving. Use this if you flubbed the start and want to begin again.">&#8635; Reset</button>
+      <button class="btn btn-start dashboard-only" id="newSessionBtn"
+              data-help-title="+ New Practice Session"
+              data-help-text="Switches from the dashboard view to the practice view where you can give a tour and be graded.">+ New Practice Session</button>
+    </div>
+  </header>
+
+  <!-- ── Dashboard View (landing page) ── -->
+  <main class="dashboard-view dashboard-only" id="dashboardView">
+    <div class="dash-hero"
+         data-help-title="Welcome panel"
+         data-help-text="Quick recap of where you are. Click the big white button to start a new practice run.">
+      <div>
+        <h1>Welcome back</h1>
+        <p>Track your progress, review past sessions, and start a new practice run when you're ready.</p>
+      </div>
+      <button class="btn btn-start btn-large" id="newSessionBtn2"
+              data-help-title="Start a New Practice Session"
+              data-help-text="Jumps into the practice view. Set your rubric, upload your manual, and use the Position Coach + fist gesture for hands-free start.">+ Start a New Practice Session</button>
+    </div>
+    <div id="dashContent"></div>
+    <div class="dash-actions-footer">
+      <button class="btn btn-reset" id="clearHistory"
+              data-help-title="Clear All History"
+              data-help-text="Permanently deletes every saved session from this browser. Use with caution — there is no undo. Sessions never leave your computer, so backup means clicking 'Print Report' on individual sessions first.">Clear All History</button>
+    </div>
+  </main>
+
+  <!-- ── Practice View ── -->
+  <div class="app-body practice-only">
+
+    <!-- ── Sidebar: Rubric + Manual ── -->
+    <aside class="sidebar">
+
+      <section class="side-section">
+        <h2 class="side-title">Rubric</h2>
+        <div class="field-group"
+             data-help-title="Target Duration"
+             data-help-text="How long the real orientation tour is supposed to take, in minutes. The timer at the top is your reference against this number — try to finish within ±1 minute of it.">
+          <label>Target Duration</label>
+          <div class="input-row">
+            <input type="number" id="targetMinutes" value="10" min="1" max="60" />
+            <span class="unit">min</span>
+          </div>
+        </div>
+        <div class="field-group"
+             data-help-title="Expected Stories (#)"
+             data-help-text="How many anecdotes or human moments your tour should include. Default 5. The app counts narrative cues like 'for example', 'back in', 'fun fact', 'let me tell you' — your detected count is scored against this target.">
+          <label>Expected Stories (#)</label>
+          <input type="number" id="expectedStories" value="5" min="0" />
+        </div>
+        <div class="field-group"
+             data-help-title="Max Filler Words / min"
+             data-help-text="The line above which your filler rate becomes a problem. Default 2.0/min. Above this rate, the Filler Control grade tanks fast. Polished speakers run under 0.3/min.">
+          <label>Max Filler Words / min</label>
+          <input type="number" id="maxFillersPerMin" value="2" min="0" step="0.5" />
+        </div>
+        <div class="field-group"
+             data-help-title="Expected Ice Breakers (#)"
+             data-help-text="How many audience-directed questions your tour should include — e.g. 'Do y'all huskies prefer coffee or tea?'. Default 3. The app counts phrases like 'do y'all', 'anyone here', 'who's been', 'what's your favorite'.">
+          <label>Expected Ice Breakers (#)</label>
+          <input type="number" id="expectedIceBreakers" value="3" min="0" />
+        </div>
+        <div class="field-group"
+             data-help-title="Target Energy (words/min)"
+             data-help-text="The pace you should aim for. Default 150 WPM — an engaged, conversational tour-guide pace. Below ~120 sounds monotone; above ~200 sounds rushed. The live Energy card shows your actual WPM.">
+          <label>Target Energy (words/min)</label>
+          <input type="number" id="targetWPM" value="150" min="50" max="300" />
+        </div>
+        <div class="field-group"
+             data-help-title="Min Good Projection"
+             data-help-text="What percentage of the tour you should be projecting loudly enough. Default 65%. If you stay above the loudness threshold for at least this % of the session, you earn full Projection points.">
+          <label>Min Good Projection</label>
+          <div class="input-row">
+            <input type="number" id="minProjectionPct" value="65" min="0" max="100" />
+            <span class="unit">%</span>
+          </div>
+        </div>
+        <div class="field-group"
+             data-help-title="Projection Sensitivity"
+             data-help-text="The threshold for what counts as 'loud enough'. Move RIGHT (stricter) if your mic picks up your voice easily and you want a tougher workout — you'll have to actually project. Move LEFT (looser) if the app keeps saying 'Too Quiet!' even when you're clearly projecting (cheap mic, sitting far from the laptop). The black line on the volume bar is the live threshold marker — push the green bar past it.">
+          <label>Projection Sensitivity</label>
+          <div class="input-row">
+            <input type="range" id="projThreshold" min="10" max="80" value="40" style="flex:1" />
+            <span class="unit" id="thresholdLabel">40%</span>
+          </div>
+          <span class="hint">Move right = stricter</span>
+        </div>
+        <div class="field-group"
+             data-help-title="Additional Criteria"
+             data-help-text="Free-text notes (e.g. 'smile, eye contact, walk confidently'). These show up in the Performance Report as a reminder but aren't auto-graded — they're for you.">
+          <label>Additional Criteria</label>
+          <textarea id="rubricNotes" rows="3" placeholder="e.g. maintain eye contact, smile, walk confidently..."></textarea>
+        </div>
+      </section>
+
+      <section class="side-section"
+               data-help-title="Tour Manual"
+               data-help-text="Upload your tour manual as a PDF or Word doc. The app extracts up to 80 key terms (proper nouns, dates, place names, distinctive vocabulary) and grades your Accuracy on how many you mention. Without a manual, Accuracy is skipped and your other 5 categories are renormalized to 100.">
+        <h2 class="side-title">Tour Manual</h2>
+        <label class="upload-label" for="manualUpload">+ Upload PDF, Word Doc, or Images</label>
+        <input type="file" id="manualUpload" accept=".pdf,.docx,image/*" multiple style="display:none" />
+        <div class="manual-status" id="manualStatus">No manual loaded &mdash; Accuracy will be skipped.</div>
+        <div class="manual-grid" id="manualImages"></div>
+      </section>
+
+    </aside>
+
+    <!-- ── Main Dashboard ── -->
+    <main class="dashboard">
+
+      <!-- Camera -->
+      <div class="camera-card"
+           data-help-title="Camera Feed"
+           data-help-text="Optional video. Enable Camera to see yourself + activate the fist-gesture STOP during practice. The Position Coach uses its own camera stream to measure your distance.">
+        <div class="card-header">
+          <span>Camera Feed</span>
+          <div style="display:flex; gap:6px">
+            <button class="btn-sm primary" id="positionBtn"
+                    data-help-title="Position Coach"
+                    data-help-text="Opens a full-screen overlay showing live distance from the camera. The app measures distance from your face (close range) or shoulders (far range, up to ~15 ft). When you're within ±0.8 ft of target, hold up a CLOSED FIST for ~half a second to auto-start practice. Use Recalibrate if the distance reading feels off for your webcam.">&#x1F4D0; Position Coach</button>
+            <button class="btn-sm" id="cameraBtn"
+                    data-help-title="Enable Camera"
+                    data-help-text="Turns on your webcam in this panel so you can see yourself while practicing. With camera on AND practice running, a fist gesture will trigger Stop & Grade hands-free.">Enable Camera</button>
+          </div>
+        </div>
+        <div class="camera-wrap">
+          <video id="cameraFeed" autoplay muted playsinline></video>
+          <div class="camera-overlay" id="cameraOverlay">Camera is off</div>
+        </div>
+      </div>
+
+      <!-- Metrics row -->
+      <div class="metrics-row">
+
+        <!-- Voice Projection -->
+        <div class="metric-card"
+             data-help-title="Voice Projection"
+             data-help-text="Live volume meter. The green bar = current loudness; the black vertical line = your threshold (set by Projection Sensitivity in the rubric). Push the bar past the line to count as 'projecting'. Status text reads Too Quiet → Speak Louder → Good Projection.">
+          <div class="metric-title">Voice Projection</div>
+          <div class="volume-track">
+            <div class="volume-fill" id="volumeFill"></div>
+            <div class="threshold-marker" id="thresholdMarker"></div>
+          </div>
+          <div class="volume-ends"><span>Quiet</span><span>Loud</span></div>
+          <div class="proj-status" id="projStatus">—</div>
+          <div class="proj-pct" id="projPct">Good projection: 0%</div>
+        </div>
+
+        <!-- Filler Words -->
+        <div class="metric-card"
+             data-help-title="Filler Words"
+             data-help-text="Counts 'like', 'you know', 'basically', 'actually', 'guys', and 20+ more as you speak. The pulsing green dot confirms the mic is hearing you. The 'Heard:' line shows the latest transcript — useful for debugging. Note: Chrome strips 'um/uh' as noise.">
+          <div class="metric-title">
+            Filler Words
+            <span class="mic-indicator" id="micIndicator" title="Listening">
+              <span class="mic-dot"></span>
+            </span>
+          </div>
+          <div class="big-num" id="fillerCount">0</div>
+          <div class="sub-label" id="fillersPerMin">0.0 per minute</div>
+          <div class="tag-cloud" id="fillerTags"></div>
+          <div class="last-heard" id="lastHeard"></div>
+        </div>
+
+        <!-- Stories -->
+        <div class="metric-card"
+             data-help-title="Stories Told"
+             data-help-text="Detected by narrative cues like 'for example', 'back in', 'fun fact', 'this building', 'let me tell you' (40+ patterns). Each story logs its timestamp. Compare your count to the Expected Stories target.">
+          <div class="metric-title">Stories Told</div>
+          <div class="big-num" id="storyCount">0</div>
+          <div class="sub-label" id="storyTarget">Target: 5 stories</div>
+          <div class="story-log" id="storyLog"></div>
+        </div>
+
+        <!-- Energy / WPM -->
+        <div class="metric-card"
+             data-help-title="Energy (words/min)"
+             data-help-text="Your live speaking pace. Status reads Engaged / A bit flat / Low energy / Slightly fast / Slow down based on how close you are to Target Energy in the rubric. ~150 WPM is engaged tour-guide pace.">
+          <div class="metric-title">Energy</div>
+          <div class="big-num" id="wpmCount">0</div>
+          <div class="sub-label" id="wpmLabel">words/min &bull; target 150</div>
+          <div class="energy-status" id="energyStatus">&mdash;</div>
+        </div>
+
+        <!-- Ice Breakers -->
+        <div class="metric-card"
+             data-help-title="Ice Breakers"
+             data-help-text="Counts audience-directed questions like 'do y'all', 'anyone here', 'who's been', 'what's your favorite', 'raise your hand'. These turn a monologue into a conversation. Each ice breaker logs its timestamp.">
+          <div class="metric-title">Ice Breakers</div>
+          <div class="big-num" id="iceCount">0</div>
+          <div class="sub-label" id="iceTarget">Target: 3 questions</div>
+          <div class="story-log" id="iceLog"></div>
+        </div>
+
+        <!-- Accuracy / Manual Coverage -->
+        <div class="metric-card"
+             data-help-title="Accuracy"
+             data-help-text="Live % of your manual's key terms you've mentioned so far. Updates as you talk. ≥75% = excellent. <35% = critical (you're skipping whole sections). Shows '—' if you haven't uploaded a manual.">
+          <div class="metric-title">Accuracy</div>
+          <div class="big-num" id="accuracyPct">&mdash;</div>
+          <div class="sub-label" id="accuracySub">manual coverage</div>
+          <div class="tag-cloud" id="missedTerms"></div>
+        </div>
+
+      </div>
+
+      <!-- Transcript -->
+      <div class="transcript-card"
+           data-help-title="Live Transcript"
+           data-help-text="Speech-to-text of what you're saying, updated in real-time. Filler words are highlighted RED, story cues are highlighted BLUE. After Stop & Grade, this transcript is saved with the session so you can review exactly what you said.">
+        <div class="card-header">
+          <span>Live Transcript</span>
+          <span class="hint-sm">Fillers highlighted red &bull; Story cues highlighted blue</span>
+        </div>
+        <div class="transcript-box" id="transcriptBox">
+          <span class="placeholder-text">Transcript will appear here once you start...</span>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ── Position Coach Overlay ── -->
+  <div class="position-overlay" id="positionOverlay" style="display:none">
+    <div class="position-box">
+      <div class="position-header">
+        <h2>&#x1F4D0; Position Coach</h2>
+        <button class="btn-close" id="closePosition">&#x2715;</button>
+      </div>
+      <div class="position-body">
+        <div class="position-video-wrap">
+          <video id="posVideo" autoplay muted playsinline></video>
+          <canvas id="posCanvas"></canvas>
+        </div>
+        <div class="position-info">
+          <div class="pos-target-row">
+            <label>Target distance:
+              <input type="number" id="posTarget" value="10" min="3" max="25" step="0.5" /> ft
+            </label>
+          </div>
+          <div class="pos-distance" id="posDistance">— ft</div>
+          <div class="pos-instruction" id="posInstruction">Initializing...</div>
+          <button class="btn btn-reset" id="recalibrate">Recalibrate &mdash; "I am at target now"</button>
+          <p class="pos-hint">
+            Walk backward until you see <strong style="color:var(--green)">PERFECT</strong>,
+            then hold up a <strong>&#x270A; closed fist</strong> for ~half a second to start practice automatically.<br><br>
+            Far away? The app uses your <strong>shoulders</strong> for distance when your face is too small to detect.
+            During practice, enable the main camera and show a fist again to stop &amp; grade.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ── Grade Modal ── -->
+  <div class="modal-overlay" id="gradeModal" style="display:none">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2>Performance Report</h2>
+        <button class="btn-close" id="closeGrade">&#x2715;</button>
+      </div>
+      <div id="gradeContent"></div>
+      <div class="modal-footer">
+        <button class="btn btn-reset" id="closeGrade2">Close</button>
+        <button class="btn btn-start" onclick="window.print()">Print Report</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+  <script>
+    if (window.pdfjsLib) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+    }
+  </script>
+  <script src="app.js"></script>
+</body>
+</html>
