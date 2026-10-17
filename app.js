@@ -817,6 +817,10 @@ async function initMediaPipe() {
           'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite',
       },
       runningMode: 'VIDEO',
+      // Lower confidence so faces beyond arm's length still register.
+      // Default (0.5) silently drops anything farther than ~2 ft.
+      minDetectionConfidence: 0.25,
+      minSuppressionThreshold: 0.3,
     });
     poseLandmarker = await mod.PoseLandmarker.createFromOptions(mpVision, {
       baseOptions: {
@@ -825,6 +829,10 @@ async function initMediaPipe() {
       },
       runningMode: 'VIDEO',
       numPoses: 1,
+      // Lower confidence so partial / distant bodies still register.
+      minPoseDetectionConfidence: 0.3,
+      minPosePresenceConfidence: 0.3,
+      minTrackingConfidence: 0.3,
     });
     gestureRecognizer = await mod.GestureRecognizer.createFromOptions(mpVision, {
       baseOptions: {
@@ -907,8 +915,8 @@ function posDetectLoop() {
         fRes.detections[0]
       );
       const b = face.boundingBox;
-      // Only trust face if it's big enough (>20 px) — otherwise prefer pose
-      if (b.width > 20) {
+      // Accept any face bigger than ~8 px (model confidence already filtered)
+      if (b.width > 8) {
         distanceFt = distanceFromFacePx(b.width, posVideo.videoWidth);
         drawBox = { x: b.originX, y: b.originY, w: b.width, h: b.height };
         method = 'face';
@@ -916,20 +924,26 @@ function posDetectLoop() {
     }
   }
 
-  // 2. Fall back to pose (works at long range using shoulder span)
+  // 2. Fall back to pose. Try shoulders first (most accurate), then
+  //    nose+ears as a last-ditch "I can see your head" fallback for when
+  //    the body is partially cropped or distant.
   if (distanceFt === null && poseLandmarker) {
     const pRes = poseLandmarker.detectForVideo(posVideo, ts);
     if (pRes.landmarks?.length) {
       const lm = pRes.landmarks[0];
       const ls = lm[11], rs = lm[12]; // left/right shoulder
-      if (ls && rs && ls.visibility > 0.3 && rs.visibility > 0.3) {
+      const nose = lm[0], lEar = lm[7], rEar = lm[8];
+
+      const shouldersOK = ls && rs
+        && (ls.visibility ?? 1) > 0.15 && (rs.visibility ?? 1) > 0.15;
+
+      if (shouldersOK) {
         const dxNorm = Math.abs(rs.x - ls.x);
         const dyNorm = Math.abs(rs.y - ls.y);
         const shoulderPx = Math.sqrt(dxNorm * dxNorm + dyNorm * dyNorm) * posVideo.videoWidth;
-        if (shoulderPx > 15) {
+        if (shoulderPx > 8) {
           distanceFt = distanceFromShoulderPx(shoulderPx, posVideo.videoWidth);
-          // Build a bounding box from nose+shoulders+hips for visualization
-          const nose = lm[0];
+          // Bounding box from nose + shoulders + hips for visualization
           const lh = lm[23], rh = lm[24];
           const xs = [ls.x, rs.x, lh?.x ?? ls.x, rh?.x ?? rs.x].map(v => v * posVideo.videoWidth);
           const ys = [nose?.y ?? ls.y, ls.y, rs.y, lh?.y ?? ls.y, rh?.y ?? rs.y]
@@ -938,6 +952,24 @@ function posDetectLoop() {
           const minY = Math.min(...ys), maxY = Math.max(...ys);
           drawBox = { x: minX - 20, y: minY - 20, w: (maxX - minX) + 40, h: (maxY - minY) + 40 };
           method = 'pose';
+        }
+      }
+
+      // Final fallback: use ear-to-ear distance (~15cm avg) if the head
+      // landmarks are visible but shoulders aren't.
+      if (distanceFt === null
+          && lEar && rEar
+          && (lEar.visibility ?? 1) > 0.15 && (rEar.visibility ?? 1) > 0.15) {
+        const dx = Math.abs(rEar.x - lEar.x);
+        const dy = Math.abs(rEar.y - lEar.y);
+        const headPx = Math.sqrt(dx * dx + dy * dy) * posVideo.videoWidth;
+        if (headPx > 6) {
+          // ear-to-ear ≈ 15 cm (same constant as face width, close enough)
+          distanceFt = distanceFromFacePx(headPx, posVideo.videoWidth);
+          const cx = ((lEar.x + rEar.x) / 2) * posVideo.videoWidth;
+          const cy = ((lEar.y + rEar.y) / 2) * posVideo.videoHeight;
+          drawBox = { x: cx - headPx, y: cy - headPx * 1.1, w: headPx * 2, h: headPx * 2.4 };
+          method = 'head';
         }
       }
     }
