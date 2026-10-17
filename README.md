@@ -1,5 +1,11 @@
 # Tour Practice Coach
 
+### [▶ Try the live demo →](https://arshitha231.github.io/tour-practice-coach/)
+
+[![Live Demo](https://img.shields.io/badge/demo-live-6E4F72?style=for-the-badge&logo=githubpages&logoColor=white)](https://arshitha231.github.io/tour-practice-coach/)
+[![Chrome Required](https://img.shields.io/badge/browser-Chrome-D4B678?style=for-the-badge&logo=googlechrome&logoColor=white)](https://www.google.com/chrome/)
+[![No Backend](https://img.shields.io/badge/backend-none-6B8E5C?style=for-the-badge)](https://github.com/Arshitha231/tour-practice-coach#tech-stack)
+
 A browser-based practice tool that trains university tour guides on the four
 things they're actually graded on: **content accuracy, voice projection, energy,
 and audience engagement**. Runs entirely in the browser — no backend, no cost
@@ -7,7 +13,9 @@ to deploy, no sign-up.
 
 Originally built to prepare for the UW Bothell orientation tour test.
 
-![Dashboard screenshot](docs/dashboard.png)
+> **Open in Google Chrome.** Grant microphone + camera permissions when
+> prompted. Everything runs on-device: your audio/video never leaves your
+> laptop (except Chrome's own speech recognition, which is a browser API).
 
 ## What it does
 
