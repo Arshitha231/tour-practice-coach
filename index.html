@@ -71,6 +71,32 @@
     <!-- ── Sidebar: Rubric + Manual ── -->
     <aside class="sidebar">
 
+      <section class="side-section"
+               data-help-title="Difficulty Mode"
+               data-help-text="Easy: generous thresholds, forgiving grading — good for early practice. Medium: realistic standards. Strict: tour-day expectations — the toughest grade. Picking a mode presets the rubric values below; you can still tweak them manually.">
+        <h2 class="side-title">Difficulty</h2>
+        <div class="mode-pills" id="modePills">
+          <button class="mode-pill" data-mode="easy" type="button">Easy</button>
+          <button class="mode-pill active" data-mode="medium" type="button">Medium</button>
+          <button class="mode-pill" data-mode="strict" type="button">Strict</button>
+        </div>
+      </section>
+
+      <section class="side-section"
+               data-help-title="Session Focus"
+               data-help-text="Pick 1–3 categories to focus on this session. Your Performance Report will put these first with extra-detailed feedback. The other categories still get graded, just more compactly. Leave empty to grade all equally.">
+        <h2 class="side-title">Focus This Session</h2>
+        <p class="side-hint">Pick up to 3 — they get priority in your report.</p>
+        <div class="focus-chips" id="focusChips">
+          <label class="focus-chip"><input type="checkbox" value="accuracy"> Accuracy</label>
+          <label class="focus-chip"><input type="checkbox" value="projection"> Projection</label>
+          <label class="focus-chip"><input type="checkbox" value="energy"> Energy</label>
+          <label class="focus-chip"><input type="checkbox" value="storytelling"> Storytelling</label>
+          <label class="focus-chip"><input type="checkbox" value="iceBreakers"> Ice Breakers</label>
+          <label class="focus-chip"><input type="checkbox" value="fillers"> Fillers</label>
+        </div>
+      </section>
+
       <section class="side-section">
         <h2 class="side-title">Rubric</h2>
         <div class="field-group"

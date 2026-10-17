@@ -127,6 +127,40 @@ const state = {
 
   // camera
   camStream: null,
+
+  // difficulty + focus
+  mode: 'medium',           // 'easy' | 'medium' | 'strict'
+  focusAreas: new Set(),    // subset of CATEGORY_KEYS
+};
+
+// Category keys shared across focus + report
+const CATEGORY_KEYS = ['accuracy', 'projection', 'energy', 'storytelling', 'iceBreakers', 'fillers'];
+const CATEGORY_LABELS = {
+  accuracy:    'Accuracy of Information',
+  projection:  'Voice Projection',
+  energy:      'Energy',
+  storytelling:'Storytelling',
+  iceBreakers: 'Ice Breaker Questions',
+  fillers:     'Filler Control',
+};
+
+// Difficulty-mode presets. Easy = forgiving, Strict = tour-day standard.
+const MODE_PRESETS = {
+  easy: {
+    targetMinutes: 10, expectedStories: 3, maxFillersPerMin: 4,
+    expectedIceBreakers: 2, targetWPM: 140, minProjectionPct: 50,
+    projThreshold: 28,
+  },
+  medium: {
+    targetMinutes: 10, expectedStories: 4, maxFillersPerMin: 2.5,
+    expectedIceBreakers: 3, targetWPM: 150, minProjectionPct: 60,
+    projThreshold: 38,
+  },
+  strict: {
+    targetMinutes: 10, expectedStories: 5, maxFillersPerMin: 1.5,
+    expectedIceBreakers: 4, targetWPM: 160, minProjectionPct: 72,
+    projThreshold: 50,
+  },
 };
 
 // ── DOM refs ───────────────────────────────────────────────────────────────
@@ -1300,30 +1334,72 @@ function showGrade() {
     supervisorNote = `Not acceptable for a tour guide representing this institution. ${issues.length ? `Fundamental failures: ${issues.join('; ')}. ` : ''}You are not ready. Start from scratch, drill every section of the manual, build in stories and audience moments deliberately, and do not attempt a live tour until you consistently score above 80.`;
   }
 
-  // ── Build category cards ──
-  const catCards = [];
-  if (hasManual) {
-    catCards.push(cat('Accuracy of Information', aS, 20, aG, aF, letterColor));
-  } else {
-    catCards.push(`
-      <div class="grade-cat fair" style="opacity:0.85">
-        <div class="cat-header">
-          <span class="cat-name">Accuracy of Information</span>
-          <span class="cat-score" style="color:var(--muted)">N/A</span>
-        </div>
-        <div class="cat-feedback">${aF}</div>
-      </div>`);
-  }
-  catCards.push(cat('Voice Projection', pS, 15, pG, pF, letterColor));
-  catCards.push(cat('Energy',           eS, 15, eG, eF, letterColor));
-  catCards.push(cat('Storytelling',     sS, 20, sG, sF, letterColor));
-  catCards.push(cat('Ice Breaker Questions', iS, 15, iG, iF, letterColor));
-  catCards.push(cat('Filler Control',   fS, 15, fG, fF, letterColor));
+  // ── Collect categories into a reorderable list ──
+  const catsRaw = [
+    { key: 'accuracy',    label: 'Accuracy of Information', score: aS, max: 20, grade: aG, feedback: aF, hasData: hasManual },
+    { key: 'projection',  label: 'Voice Projection',        score: pS, max: 15, grade: pG, feedback: pF, hasData: true },
+    { key: 'energy',      label: 'Energy',                  score: eS, max: 15, grade: eG, feedback: eF, hasData: true },
+    { key: 'storytelling',label: 'Storytelling',            score: sS, max: 20, grade: sG, feedback: sF, hasData: true },
+    { key: 'iceBreakers', label: 'Ice Breaker Questions',   score: iS, max: 15, grade: iG, feedback: iF, hasData: true },
+    { key: 'fillers',     label: 'Filler Control',          score: fS, max: 15, grade: fG, feedback: fF, hasData: true },
+  ];
+
+  // Focus-first ordering: user-selected focus areas first (highlighted),
+  // then everything else in their original order.
+  const focusList = [...state.focusAreas];
+  const focusCats    = focusList.map(k => catsRaw.find(c => c.key === k)).filter(Boolean);
+  const nonFocusCats = catsRaw.filter(c => !state.focusAreas.has(c.key));
+
+  const renderCat = (c, isFocus) => {
+    if (c.key === 'accuracy' && !c.hasData) {
+      return `
+        <div class="grade-cat fair ${isFocus ? 'focus-cat' : ''}" style="opacity:0.85">
+          ${isFocus ? '<div class="focus-badge">★ Focus</div>' : ''}
+          <div class="cat-header">
+            <span class="cat-name">${c.label}</span>
+            <span class="cat-score" style="color:var(--muted)">N/A</span>
+          </div>
+          <div class="cat-feedback">${c.feedback}</div>
+        </div>`;
+    }
+    return cat(c.label, c.score, c.max, c.grade, c.feedback, letterColor, isFocus);
+  };
+
+  const focusHtml    = focusCats.map(c => renderCat(c, true)).join('');
+  const nonFocusHtml = nonFocusCats.map(c => renderCat(c, false)).join('');
 
   const scoreLabel = hasManual ? `${total} / 100` : `${total} / 100 (Accuracy skipped)`;
 
+  // Build summary donut: one slice per category, size = score, color = tier
+  const totalPossible = catsRaw.reduce((a, c) => a + (c.score != null ? c.max : 0), 0);
+  const donutSvg = buildDonut(catsRaw, totalPossible);
+
+  // Horizontal bar overview — one bar per category
+  const barsHtml = catsRaw.map(c => {
+    if (c.score == null) {
+      return `<div class="score-bar-row">
+        <span class="score-bar-label">${c.label}</span>
+        <div class="score-bar"><div class="score-bar-fill" style="width:0%; background:var(--muted)"></div></div>
+        <span class="score-bar-val" style="color:var(--muted)">N/A</span>
+      </div>`;
+    }
+    const pct = Math.round((c.score / c.max) * 100);
+    const color = c.grade === 'excellent' ? 'var(--green)'
+                : c.grade === 'good'      ? 'var(--teal)'
+                : c.grade === 'fair'      ? 'var(--amber)'
+                                          : 'var(--red)';
+    return `<div class="score-bar-row">
+      <span class="score-bar-label">${c.label}</span>
+      <div class="score-bar"><div class="score-bar-fill" style="width:${pct}%; background:${color}"></div></div>
+      <span class="score-bar-val">${c.score}/${c.max}</span>
+    </div>`;
+  }).join('');
+
+  const modeChip = `<span class="grade-mode-chip ${state.mode}">${state.mode.toUpperCase()} MODE</span>`;
+
   gradeContent.innerHTML = `
     <div class="grade-overall">
+      ${modeChip}
       <div class="grade-letter" style="color:${letterColor}">${letter}</div>
       <div class="grade-score">${scoreLabel}</div>
       <div class="grade-verdict">${verdict}</div>
@@ -1336,8 +1412,19 @@ function showGrade() {
       </div>
     </div>
 
+    <div class="grade-visual">
+      <div class="grade-visual-donut">${donutSvg}</div>
+      <div class="grade-visual-bars">${barsHtml}</div>
+    </div>
+
+    ${focusCats.length ? `
+      <div class="grade-section-title"><span>&#x2605;</span> Your focus for this session</div>
+      <div class="grade-cats">${focusHtml}</div>
+      <div class="grade-section-title grade-section-title-muted">Everything else</div>
+    ` : ''}
+
     <div class="grade-cats">
-      ${catCards.join('')}
+      ${nonFocusHtml}
     </div>
 
     ${rubricNotes ? `
@@ -1571,12 +1658,13 @@ function letterTone(letter) {
   return 'low';
 }
 
-function cat(name, score, max, grade, feedback, accentColor) {
+function cat(name, score, max, grade, feedback, accentColor, isFocus = false) {
   const pct = Math.round((score / max) * 100);
-  const colors = { excellent: 'var(--green)', good: 'var(--accent)', fair: 'var(--yellow)', poor: 'var(--red)' };
+  const colors = { excellent: 'var(--green)', good: 'var(--teal)', fair: 'var(--amber)', poor: 'var(--red)' };
   const c = colors[grade] || accentColor;
   return `
-    <div class="grade-cat ${grade}">
+    <div class="grade-cat ${grade} ${isFocus ? 'focus-cat' : ''}">
+      ${isFocus ? '<div class="focus-badge">&#x2605; Focus area</div>' : ''}
       <div class="cat-header">
         <span class="cat-name">${name}</span>
         <span class="cat-score" style="color:${c}">${score}/${max}</span>
@@ -1586,6 +1674,60 @@ function cat(name, score, max, grade, feedback, accentColor) {
       </div>
       <div class="cat-feedback">${feedback}</div>
     </div>`;
+}
+
+// ── Donut-chart summary for Performance Report ────────────────────────────
+function buildDonut(cats, totalPossible) {
+  const scored = cats.filter(c => c.score != null);
+  const totalScore = scored.reduce((a, c) => a + c.score, 0);
+  const pct = totalPossible > 0 ? Math.round((totalScore / totalPossible) * 100) : 0;
+
+  // Palette per category (muted / sophisticated from reference)
+  const palette = {
+    accuracy:    '#6E4F72',
+    projection:  '#3F6E71',
+    energy:      '#C19056',
+    storytelling:'#6B8E5C',
+    iceBreakers: '#A3637D',
+    fillers:     '#8A6B91',
+  };
+
+  const size = 180;
+  const r = 70;
+  const sw = 22;
+  const cx = size / 2, cy = size / 2;
+  const circumference = 2 * Math.PI * r;
+
+  let offset = 0;
+  const sumAll = scored.reduce((a, c) => a + c.max, 0);
+  const slices = scored.map(c => {
+    const frac = c.max / sumAll;
+    const dash = frac * circumference;
+    const scoreFrac = c.score / c.max;
+    const fillDash = dash * scoreFrac;
+    // Background track slice
+    const bgSlice = `
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none"
+        stroke="rgba(42,35,66,0.08)" stroke-width="${sw}"
+        stroke-dasharray="${dash - 2} ${circumference}" stroke-dashoffset="${-offset}"
+        transform="rotate(-90 ${cx} ${cy})"/>`;
+    // Filled slice (score portion)
+    const fgSlice = `
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none"
+        stroke="${palette[c.key] || '#6E4F72'}" stroke-width="${sw}"
+        stroke-dasharray="${fillDash} ${circumference}" stroke-dashoffset="${-offset}"
+        stroke-linecap="butt"
+        transform="rotate(-90 ${cx} ${cy})"/>`;
+    offset += dash;
+    return bgSlice + fgSlice;
+  }).join('');
+
+  return `
+    <svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" class="donut-svg">
+      ${slices}
+      <text x="${cx}" y="${cy - 4}" text-anchor="middle" class="donut-pct">${pct}%</text>
+      <text x="${cx}" y="${cy + 18}" text-anchor="middle" class="donut-lbl">overall</text>
+    </svg>`;
 }
 
 // ── Modal close ────────────────────────────────────────────────────────────
@@ -1626,6 +1768,49 @@ $('newSessionBtn').addEventListener('click', showPracticeView);
 $('newSessionBtn2').addEventListener('click', showPracticeView);
 $('backToDashBtn').addEventListener('click', showDashboardView);
 $('clearHistory').addEventListener('click', clearSessions);
+
+// ── Difficulty mode selector ───────────────────────────────────────────────
+
+function applyMode(mode) {
+  state.mode = mode;
+  const preset = MODE_PRESETS[mode] || MODE_PRESETS.medium;
+  for (const [id, val] of Object.entries(preset)) {
+    const el = $(id);
+    if (el) {
+      el.value = val;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  }
+  // Update visual state of mode pills
+  document.querySelectorAll('#modePills .mode-pill').forEach(p =>
+    p.classList.toggle('active', p.dataset.mode === mode)
+  );
+}
+
+document.querySelectorAll('#modePills .mode-pill').forEach(p => {
+  p.addEventListener('click', () => applyMode(p.dataset.mode));
+});
+
+// ── Focus-area chips ──────────────────────────────────────────────────────
+
+document.querySelectorAll('#focusChips input[type="checkbox"]').forEach(cb => {
+  cb.addEventListener('change', () => {
+    const key = cb.value;
+    if (cb.checked) {
+      if (state.focusAreas.size >= 3) {
+        cb.checked = false;
+        return;    // enforce max 3
+      }
+      state.focusAreas.add(key);
+    } else {
+      state.focusAreas.delete(key);
+    }
+    cb.closest('.focus-chip').classList.toggle('checked', cb.checked);
+  });
+});
+
+// Apply medium preset on load so inputs match UI
+applyMode('medium');
 
 // ── Interactive Help (Inspect + Tour, GarageBand-style) ───────────────────
 //
